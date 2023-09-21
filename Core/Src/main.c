@@ -18,10 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#define K0_Button_GPIO_Port GPIOE
-#define K0_Button_Pin GPIO_PIN_4
-#define K1_Button_GPIO_Port GPIOE
-#define K1_Button_Pin GPIO_PIN_3
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -50,7 +47,6 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -82,13 +78,14 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  __HAL_RCC_GPIOA_CLK_ENABLE(); //enabling clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;//enabling clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;//enabling clock
   GPIOA->MODER |= GPIO_MODER_MODE6_0; //УРААААА!!!!! АЛЕ М�? ЙОМУ НІЧО НЕ ПОДАЄМ
   GPIOA->MODER |= GPIO_MODER_MODE7_0;
+  GPIOE->PUPDR |= GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD3_0;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -100,17 +97,18 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (HAL_GPIO_ReadPin(K0_Button_GPIO_Port, K0_Button_Pin)) {
-		  GPIOA->BSRR |= GPIO_BSRR_BS6;
-	  } else {
+	  if ( (~(GPIOE->IDR) & GPIO_IDR_ID4) ) {
 		  GPIOA->BSRR |= GPIO_BSRR_BR6;
+	  } else {
+		  GPIOA->BSRR |= GPIO_BSRR_BS6;
 	  }
 
-	  if (HAL_GPIO_ReadPin(K1_Button_GPIO_Port, K1_Button_Pin)) {
-		 GPIOA->BSRR |= GPIO_BSRR_BS7;
-	  } else {
+	  if ( (~(GPIOE->IDR) & GPIO_IDR_ID3) ) {
 		  GPIOA->BSRR |= GPIO_BSRR_BR7;
+	  } else {
+		  GPIOA->BSRR |= GPIO_BSRR_BS7;
 	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -159,30 +157,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOE_CLK_ENABLE();
-
-  /*Configure GPIO pins : PE4 PE5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
