@@ -18,10 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#define K0_Button_GPIO_Port GPIOE
-#define K0_Button_Pin GPIO_PIN_4
-#define K1_Button_GPIO_Port GPIOE
-#define K1_Button_Pin GPIO_PIN_3
+#include "cmsis_os.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -43,14 +41,18 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
+osThreadId Task_K0Handle;
+osThreadId Task_K1Handle;
+osSemaphoreId ButtonTasksSemaphoreHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
+void StartTask_K0(void const * argument);
+void StartTask_K1(void const * argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -82,17 +84,57 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  __HAL_RCC_GPIOA_CLK_ENABLE(); //enabling clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;//enabling clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;//enabling clock
   GPIOA->MODER |= GPIO_MODER_MODE6_0; //УРААААА!!!!! АЛЕ М�? ЙОМУ НІЧО НЕ ПОДАЄМ
   GPIOA->MODER |= GPIO_MODER_MODE7_0;
+  GPIOE->PUPDR |= GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD3_0;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
+  GPIOA->BSRR |= GPIO_BSRR_BS7;
+  GPIOA->BSRR |= GPIO_BSRR_BS6;
   /* USER CODE END 2 */
 
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of ButtonTasksSemaphore */
+  osSemaphoreDef(ButtonTasksSemaphore);
+  ButtonTasksSemaphoreHandle = osSemaphoreCreate(osSemaphore(ButtonTasksSemaphore), 1);
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of Task_K0 */
+  osThreadDef(Task_K0, StartTask_K0, osPriorityNormal, 0, 128);
+  Task_K0Handle = osThreadCreate(osThread(Task_K0), NULL);
+
+  /* definition and creation of Task_K1 */
+  osThreadDef(Task_K1, StartTask_K1, osPriorityNormal, 0, 128);
+  Task_K1Handle = osThreadCreate(osThread(Task_K1), NULL);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -100,17 +142,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (HAL_GPIO_ReadPin(K0_Button_GPIO_Port, K0_Button_Pin)) {
-		  GPIOA->BSRR |= GPIO_BSRR_BS6;
-	  } else {
-		  GPIOA->BSRR |= GPIO_BSRR_BR6;
-	  }
 
-	  if (HAL_GPIO_ReadPin(K1_Button_GPIO_Port, K1_Button_Pin)) {
-		 GPIOA->BSRR |= GPIO_BSRR_BS7;
-	  } else {
-		  GPIOA->BSRR |= GPIO_BSRR_BR7;
-	  }
   }
   /* USER CODE END 3 */
 }
@@ -161,33 +193,69 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOE_CLK_ENABLE();
-
-  /*Configure GPIO pins : PE4 PE5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
-}
-
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the Task1 thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartTask_K0(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+		  if ( (~(GPIOE->IDR) & GPIO_IDR_ID4) &&
+				  !osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever))
+		  {
+			  GPIOA->BSRR |= GPIO_BSRR_BR6;
+			  osDelay(1000);
+			  GPIOA->BSRR |= GPIO_BSRR_BS6;
+			  osDelay(1000);
+			  GPIOA->BSRR |= GPIO_BSRR_BR6;
+			  osDelay(1000);
+			  GPIOA->BSRR |= GPIO_BSRR_BS6;
+			  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
+		  }
+
+	  osDelay(10);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartTask02 */
+/**
+* @brief Function implementing the Task_K1 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask02 */
+void StartTask_K1(void const * argument)
+{
+  /* USER CODE BEGIN StartTask02 */
+  /* Infinite loop */
+  for(;;)
+  {
+	  //Button K1
+		  if ( (~(GPIOE->IDR) & GPIO_IDR_ID3) &&
+				  !osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever))
+		  {
+			  GPIOA->BSRR |= GPIO_BSRR_BR7;
+			  osDelay(1000);
+			  GPIOA->BSRR |= GPIO_BSRR_BS7;
+			  osDelay(1000);
+			  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
+		  }
+
+	  osDelay(10);
+  }
+  /* USER CODE END StartTask02 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
