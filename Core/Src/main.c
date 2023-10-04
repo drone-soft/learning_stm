@@ -84,15 +84,16 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;//enabling clock
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;//enabling clock
-  GPIOA->MODER |= GPIO_MODER_MODE6_0; //УРААААА!!!!! АЛЕ М�? ЙОМУ НІЧО НЕ ПОДАЄМ
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;//enabling A port clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;//enabling E port clock
+  GPIOA->MODER |= GPIO_MODER_MODE6_0;
   GPIOA->MODER |= GPIO_MODER_MODE7_0;
   GPIOE->PUPDR |= GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD3_0;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
+  //Sets LEDs to be turned of at the start
   GPIOA->BSRR |= GPIO_BSRR_BS7;
   GPIOA->BSRR |= GPIO_BSRR_BS6;
   /* USER CODE END 2 */
@@ -207,24 +208,38 @@ void SystemClock_Config(void)
 void StartTask_K0(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+	uint32_t tickstart;
+	uint32_t wait = 3000;
   /* Infinite loop */
-  for(;;)
-  {
-		  if ( (~(GPIOE->IDR) & GPIO_IDR_ID4) &&
-				  !osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever))
-		  {
-			  GPIOA->BSRR |= GPIO_BSRR_BR6;
-			  osDelay(1000);
-			  GPIOA->BSRR |= GPIO_BSRR_BS6;
-			  osDelay(1000);
-			  GPIOA->BSRR |= GPIO_BSRR_BR6;
-			  osDelay(1000);
-			  GPIOA->BSRR |= GPIO_BSRR_BS6;
-			  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
-		  }
+	 for(;;)
+	  {
+			  if ( (~(GPIOE->IDR) & GPIO_IDR_ID4) &&
+					  !osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever))
+			  {
+				  //turning on the led
+				  GPIOA->BSRR |= GPIO_BSRR_BR6;
+				  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
+				  //turning on the led
 
-	  osDelay(10);
-  }
+				  //waiting
+//				  tickstart = HAL_GetTick();
+//				  while((HAL_GetTick() - tickstart) < wait) {}
+				  osDelay(wait);
+				  //waiting
+
+				  //turning off the led
+				  while(1){
+					  if (!osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever)){
+						  GPIOA->BSRR |= GPIO_BSRR_BS6;
+						  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
+						  break;
+					  }
+				  }
+				  //turning off the led
+			  }
+
+		  osDelay(10);
+	  }
   /* USER CODE END 5 */
 }
 
@@ -239,6 +254,8 @@ void StartTask_K1(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
   /* Infinite loop */
+	uint32_t wait = 3000;
+
   for(;;)
   {
 	  //Button K1
@@ -246,16 +263,24 @@ void StartTask_K1(void const * argument)
 				  !osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever))
 		  {
 			  GPIOA->BSRR |= GPIO_BSRR_BR7;
-			  osDelay(1000);
-			  GPIOA->BSRR |= GPIO_BSRR_BS7;
-			  osDelay(1000);
 			  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
-		  }
 
-	  osDelay(10);
+			  osDelay(wait);
+
+			  while(1) {
+				  if (!osSemaphoreWait(ButtonTasksSemaphoreHandle , osWaitForever)){
+					  GPIOA->BSRR |= GPIO_BSRR_BS7;
+					  osSemaphoreRelease(ButtonTasksSemaphoreHandle);
+					  break;
+				  }
+			  }
+
+		  }
   }
   /* USER CODE END StartTask02 */
 }
+
+
 
 /**
   * @brief  This function is executed in case of error occurrence.

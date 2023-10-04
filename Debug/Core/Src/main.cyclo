@@ -1,5 +1,5 @@
 ../Core/Src/main.c:68:5:main	1
-../Core/Src/main.c:154:6:SystemClock_Config	3
-../Core/Src/main.c:207:6:StartTask_K0	3
-../Core/Src/main.c:238:6:StartTask_K1	3
-../Core/Src/main.c:264:6:Error_Handler	1
+../Core/Src/main.c:155:6:SystemClock_Config	3
+../Core/Src/main.c:208:6:StartTask_K0	4
+../Core/Src/main.c:253:6:StartTask_K1	4
+../Core/Src/main.c:289:6:Error_Handler	1
